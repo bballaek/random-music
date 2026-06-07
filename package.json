@@ -1,0 +1,11 @@
+{
+  "name": "song-tile-game",
+  "version": "1.0.0",
+  "private": true,
+  "scripts": {
+    "start": "http-server . -p 3000 -o"
+  },
+  "devDependencies": {
+    "http-server": "^14.1.1"
+  }
+}

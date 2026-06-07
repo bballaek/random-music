@@ -1,0 +1,371 @@
+<!DOCTYPE html>
+<html lang="th">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>เกมเปิดแผ่นป้ายทายเพลง</title>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <link href="https://fonts.googleapis.com/css2?family=Sarabun:wght@400;600;800&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="style.css?v=7">
+
+</head>
+<body>
+
+    <div class="grid-container" id="gameGrid">
+        <div class="card" data-slot="1" data-icon="fa-leaf" data-song="ทุ่งลุยลาย" data-audio="audio/1.mp3">
+            <div class="card-inner">
+                <div class="card-front"><i class="fa-solid fa-circle-question tile-icon"></i><span class="tile-num">1</span></div>
+                <div class="card-back"><span>ทุ่งลุยลาย</span></div>
+            </div>
+        </div>
+        <div class="card" data-slot="2" data-icon="fa-dog" data-song="หมากัด" data-audio="audio/2.mp3">
+                        <div class="card-inner">
+                            <div class="card-front"><i class="fa-solid fa-circle-question tile-icon"></i><span class="tile-num">2</span></div>
+                            <div class="card-back"><span>หมากัด</span></div>
+                        </div>
+                    </div>
+                    <div class="card" data-slot="3" data-icon="fa-person-walking-arrow-loop-left" data-song="กลับมาทำไม" data-audio="audio/3.mp3">
+                        <div class="card-inner">
+                            <div class="card-front"><i class="fa-solid fa-circle-question tile-icon"></i><span class="tile-num">3</span></div>
+                            <div class="card-back"><span>กลับมาทำไม</span></div>
+                        </div>
+                    </div>
+                    <div class="card" data-slot="4" data-icon="fa-cloud-bolt" data-song="ฟ้าฮ้องบึ้ม" data-audio="audio/4.mp3">
+                        <div class="card-inner">
+                            <div class="card-front"><i class="fa-solid fa-circle-question tile-icon"></i><span class="tile-num">4</span></div>
+                            <div class="card-back"><span>ฟ้าฮ้องบึ้ม</span></div>
+                        </div>
+                    </div>
+                    <div class="card" data-slot="5" data-icon="fa-child-reaching" data-song="แอวลั่นปัด" data-audio="audio/5.mp3">
+                        <div class="card-inner">
+                            <div class="card-front"><i class="fa-solid fa-circle-question tile-icon"></i><span class="tile-num">5</span></div>
+                            <div class="card-back"><span>แอวลั่นปัด</span></div>
+                        </div>
+                    </div>
+                    <div class="card" data-slot="6" data-icon="fa-masks-theater" data-song="ต.ล.ก" data-audio="audio/6.mp3">
+                        <div class="card-inner">
+                            <div class="card-front"><i class="fa-solid fa-circle-question tile-icon"></i><span class="tile-num">6</span></div>
+                            <div class="card-back"><span>ต.ล.ก</span></div>
+                        </div>
+                    </div>
+                    <div class="card" data-slot="7" data-icon="fa-bug" data-song="จั๊กกิ้มกับต๊กโต" data-audio="audio/7.mp3">
+                        <div class="card-inner">
+                            <div class="card-front"><i class="fa-solid fa-circle-question tile-icon"></i><span class="tile-num">7</span></div>
+                            <div class="card-back"><span>จั๊กกิ้มกับต๊กโต</span></div>
+                        </div>
+                    </div>
+                    <div class="card" data-slot="8" data-icon="fa-guitar" data-song="เด๋อเดี่ยงด่าง" data-audio="audio/8.mp3">
+                        <div class="card-inner">
+                            <div class="card-front"><i class="fa-solid fa-circle-question tile-icon"></i><span class="tile-num">8</span></div>
+                            <div class="card-back"><span>เด๋อเดี่ยงด่าง</span></div>
+                        </div>
+                    </div>
+                    <div class="card" data-slot="9" data-icon="fa-truck-pickup" data-song="คารถแห่" data-audio="audio/9.mp3">
+                        <div class="card-inner">
+                            <div class="card-front"><i class="fa-solid fa-circle-question tile-icon"></i><span class="tile-num">9</span></div>
+                            <div class="card-back"><span>คารถแห่</span></div>
+                        </div>
+                    </div>
+    </div>
+
+    <div class="colossal-modal" id="colossalModal" onclick="closeColossal()">
+        <div class="colossal-card" id="colossalCard" onclick="event.stopPropagation()">
+            <div class="colossal-inner">
+                <div class="colossal-front" aria-hidden="true">
+                    <span class="tile-num" id="colossalNumber">0</span>
+                </div>
+                <div class="colossal-back">
+                    <span id="colossalText">ชื่อเพลง</span>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div class="action-bar">
+        <button class="action-btn shuffle-btn" id="shuffleBtn" type="button" onclick="shuffleCards()">
+            <i class="fa-solid fa-shuffle"></i> สุ่มเพลง
+        </button>
+        <button class="action-btn reset-btn" id="resetBtn" type="button" onclick="resetGame()">
+            <i class="fa-solid fa-rotate-right"></i> เริ่มใหม่
+        </button>
+    </div>
+
+    <script>
+        const grid = document.getElementById('gameGrid');
+        const modal = document.getElementById('colossalModal');
+        const colossalCard = document.getElementById('colossalCard');
+        const colossalNumber = document.getElementById('colossalNumber');
+        const colossalText = document.getElementById('colossalText');
+        const resetBtn = document.getElementById('resetBtn');
+        const shuffleBtn = document.getElementById('shuffleBtn');
+        let currentGridCard = null;
+        let isAnimating = false;
+        let audioContext = null;
+        let currentSource = null;
+        let currentHtmlAudio = null;
+        let htmlAudioEndHandler = null;
+        const audioBufferCache = new Map();
+        const FLIP_MS = 650;
+        const ZOOM_MS = 700;
+
+        // ตั้งท่อนฮุกแต่ละเพลง (วินาที) — start/end เป็นวินาที (เช่น 80 = 1:20 น.)
+        const AUDIO_CLIPS = {
+            'audio/1.mp3': { start: 8.0, end: 40 },  // ทุ่งลุยลาย
+            'audio/2.mp3': { start: 15.0, end: 40 },      // หมากัด
+            'audio/3.mp3': { start: 25, end: 50 },      // กลับมาทำไม
+            'audio/4.mp3': { start: 50, end: 80 },      // ฟ้าฮ้องบึ้ม
+            'audio/5.mp3': { start: 55, end: 80 },  // แอวลั่นปัด
+            'audio/6.mp3': { start: 5.0, end: 30 },      // ต.ล.ก
+            'audio/7.mp3': { start: 60, end: 85 },      // จั๊กกิ้มกับต๊กโต
+            'audio/8.mp3': { start: 62, end: 120 },      // เด๋อเดี่ยงด่าง
+            'audio/9.mp3': { start: 62, end: 100 }       // คารถแห่
+        };
+
+        function getClip(src) {
+            return AUDIO_CLIPS[src] || { start: 0 };
+        }
+
+        function getAudioContext() {
+            if (!audioContext) {
+                audioContext = new (window.AudioContext || window.webkitAudioContext)();
+            }
+            return audioContext;
+        }
+
+        function unlockAudio() {
+            getAudioContext().resume();
+        }
+
+        function stopAudio() {
+            if (currentSource) {
+                try { currentSource.stop(0); } catch (_) {}
+                currentSource.onended = null;
+                currentSource = null;
+            }
+            if (currentHtmlAudio) {
+                if (htmlAudioEndHandler) {
+                    currentHtmlAudio.removeEventListener('timeupdate', htmlAudioEndHandler);
+                    htmlAudioEndHandler = null;
+                }
+                currentHtmlAudio.pause();
+                currentHtmlAudio.currentTime = 0;
+                currentHtmlAudio = null;
+            }
+        }
+
+        async function loadAudioBuffer(src) {
+            if (audioBufferCache.has(src)) {
+                return audioBufferCache.get(src);
+            }
+            const response = await fetch(src);
+            if (!response.ok) throw new Error('load failed: ' + src);
+            const arrayBuffer = await response.arrayBuffer();
+            const ctx = getAudioContext();
+            const audioBuffer = await ctx.decodeAudioData(arrayBuffer);
+            audioBufferCache.set(src, audioBuffer);
+            return audioBuffer;
+        }
+
+        function playHtmlAudioFallback(src, start, end, delayMs) {
+            setTimeout(() => {
+                if (currentGridCard && currentGridCard.dataset.audio !== src) return;
+
+                stopAudio();
+                const audio = new Audio(src);
+                currentHtmlAudio = audio;
+
+                if (end != null) {
+                    htmlAudioEndHandler = () => {
+                        if (audio.currentTime >= end - 0.05) stopAudio();
+                    };
+                    audio.addEventListener('timeupdate', htmlAudioEndHandler);
+                }
+
+                const begin = async () => {
+                    if (start > 0) {
+                        audio.muted = true;
+                        try { await audio.play(); } catch (_) {}
+                        audio.pause();
+                        audio.currentTime = start;
+                        audio.muted = false;
+                    }
+                    audio.play().catch(() => {});
+                };
+
+                if (audio.readyState >= 1) begin();
+                else audio.addEventListener('loadedmetadata', begin, { once: true });
+            }, delayMs);
+        }
+
+        async function scheduleCardAudio(card) {
+            const src = card.dataset.audio;
+            if (!src) return;
+
+            const { start, end } = getClip(src);
+            const clipStart = Number(start) || 0;
+            const clipEnd = end != null ? Number(end) : null;
+            const delaySec = FLIP_MS / 1000;
+
+            stopAudio();
+
+            const ctx = getAudioContext();
+            await ctx.resume();
+
+            let audioBuffer;
+            try {
+                audioBuffer = await loadAudioBuffer(src);
+            } catch (err) {
+                console.warn('Web Audio load failed, using fallback:', src, err);
+                playHtmlAudioFallback(src, clipStart, clipEnd, FLIP_MS);
+                return;
+            }
+
+            const source = ctx.createBufferSource();
+            source.buffer = audioBuffer;
+            source.connect(ctx.destination);
+
+            const duration = clipEnd != null ? Math.max(0.01, clipEnd - clipStart) : undefined;
+            const when = ctx.currentTime + delaySec;
+
+            source.onended = () => {
+                if (currentSource === source) currentSource = null;
+            };
+
+            currentSource = source;
+            source.start(when, clipStart, duration);
+        }
+
+        function setGridDimmed(on) {
+            grid.classList.toggle('is-dimmed', on);
+        }
+
+        function setActionButtonsEnabled(on) {
+            resetBtn.disabled = !on;
+            shuffleBtn.disabled = !on;
+        }
+
+        function getCardsInSlotOrder() {
+            return Array.from(grid.querySelectorAll('.card'))
+                .sort((a, b) => Number(a.dataset.slot) - Number(b.dataset.slot));
+        }
+
+        function setCardSong(card, icon, song, audio) {
+            const clip = AUDIO_CLIPS[audio] || { start: 0 };
+
+            card.dataset.icon = icon;
+            card.dataset.song = song;
+            card.dataset.audio = audio;
+            card.dataset.audioStart = clip.start ?? 0;
+
+            if (clip.end != null) {
+                card.dataset.audioEnd = clip.end;
+            } else {
+                delete card.dataset.audioEnd;
+            }
+
+            card.querySelector('.card-back span').textContent = song;
+        }
+
+        function shuffleArray(items) {
+            const arr = items.slice();
+            for (let i = arr.length - 1; i > 0; i--) {
+                const j = Math.floor(Math.random() * (i + 1));
+                [arr[i], arr[j]] = [arr[j], arr[i]];
+            }
+            return arr;
+        }
+
+        function shuffleCards() {
+            if (isAnimating) return;
+
+            stopAudio();
+            modal.classList.remove('active');
+            modal.classList.remove('allow-close');
+            setGridDimmed(false);
+            currentGridCard = null;
+
+            const cards = getCardsInSlotOrder();
+            cards.forEach(card => card.classList.remove('flipped', 'is-zooming'));
+
+            const songs = shuffleArray(cards.map(card => ({
+                icon: card.dataset.icon,
+                song: card.dataset.song,
+                audio: card.dataset.audio
+            })));
+
+            cards.forEach((card, i) => setCardSong(card, songs[i].icon, songs[i].song, songs[i].audio));
+        }
+
+        function openColossal(gridElement) {
+            if (gridElement.classList.contains('flipped') || isAnimating) return;
+
+            unlockAudio();
+            scheduleCardAudio(gridElement);
+
+            isAnimating = true;
+            setActionButtonsEnabled(false);
+            currentGridCard = gridElement;
+
+            colossalNumber.innerText = gridElement.dataset.slot;
+            colossalText.innerText = gridElement.dataset.song;
+
+            modal.classList.remove('allow-close');
+            modal.classList.remove('active');
+            setGridDimmed(false);
+
+            gridElement.classList.add('flipped');
+
+            setTimeout(() => {
+                gridElement.classList.add('is-zooming');
+                modal.classList.add('active');
+                setGridDimmed(true);
+
+                setTimeout(() => {
+                    isAnimating = false;
+                    setActionButtonsEnabled(true);
+                    modal.classList.add('allow-close');
+                }, ZOOM_MS);
+            }, FLIP_MS);
+        }
+
+        function closeColossal() {
+            if (!modal.classList.contains('allow-close')) return;
+
+            stopAudio();
+            modal.classList.remove('active');
+            modal.classList.remove('allow-close');
+            setGridDimmed(false);
+
+            if (currentGridCard) {
+                currentGridCard.classList.remove('is-zooming');
+                currentGridCard = null;
+            }
+        }
+
+        function resetGame() {
+            if (isAnimating) return;
+            stopAudio();
+            modal.classList.remove('active');
+            modal.classList.remove('allow-close');
+            document.querySelectorAll('.card').forEach(card => {
+                card.classList.remove('flipped', 'is-zooming');
+            });
+            setGridDimmed(false);
+            currentGridCard = null;
+        }
+
+        grid.addEventListener('click', (e) => {
+            const card = e.target.closest('.card');
+            if (card) {
+                unlockAudio();
+                openColossal(card);
+            }
+        });
+
+        getCardsInSlotOrder().forEach(card => {
+            setCardSong(card, card.dataset.icon, card.dataset.song, card.dataset.audio);
+        });
+    </script>
+
+</body>
+</html>
