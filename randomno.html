@@ -1,0 +1,905 @@
+<!DOCTYPE html>
+<html lang="th">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>สุ่มลำดับ</title>
+    <link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Sans+Thai:wght@400;500;600;700&display=swap" rel="stylesheet">
+    <style>
+        :root {
+            --accent: #1d4ed8;
+            --accent-soft: #dbeafe;
+            --rose: #f9a8c9;
+            --rose-deep: #e879a8;
+            --text: #1e293b;
+            --text-muted: rgba(30, 41, 59, 0.55);
+            --danger: #dc2626;
+            --text-shadow: 0 1px 8px rgba(255, 255, 255, 0.85), 0 2px 16px rgba(255, 255, 255, 0.5);
+            --slot-text-shadow:
+                -1px -1px 0 rgba(0, 0, 0, 0.55),
+                0 -1px 0 rgba(0, 0, 0, 0.55),
+                1px -1px 0 rgba(0, 0, 0, 0.55),
+                -1px 0 0 rgba(0, 0, 0, 0.55),
+                1px 0 0 rgba(0, 0, 0, 0.55),
+                -1px 1px 0 rgba(0, 0, 0, 0.55),
+                0 1px 0 rgba(0, 0, 0, 0.55),
+                1px 1px 0 rgba(0, 0, 0, 0.55),
+                0 2px 12px rgba(0, 0, 0, 0.4);
+            --radius: 20px;
+            --transition: 0.18s ease;
+        }
+
+        *,
+        *::before,
+        *::after {
+            box-sizing: border-box;
+        }
+
+        html,
+        body {
+            margin: 0;
+            width: 100%;
+            height: 100%;
+            overflow: hidden;
+        }
+
+        body {
+            font-family: 'IBM Plex Sans Thai', system-ui, sans-serif;
+            color: var(--text);
+            background: #fdf2f8;
+            -webkit-font-smoothing: antialiased;
+        }
+
+        .scene {
+            position: relative;
+            width: 100%;
+            height: 100dvh;
+            isolation: isolate;
+        }
+
+        .scene.is-rolling .bg-video {
+            animation: bg-pulse 0.3s ease-in-out infinite alternate;
+        }
+
+        @keyframes bg-pulse {
+            from { transform: scale(1); }
+            to { transform: scale(1.015); }
+        }
+
+        .bg-video {
+            position: absolute;
+            inset: 0;
+            z-index: 0;
+            width: 100%;
+            height: 100%;
+            object-fit: cover;
+            object-position: center;
+            transition: transform 0.3s ease;
+        }
+
+        .topbar {
+            position: absolute;
+            top: 0;
+            left: 0;
+            right: 0;
+            z-index: 4;
+            display: flex;
+            align-items: center;
+            justify-content: flex-end;
+            padding: clamp(0.85rem, 2.5vw, 1.25rem) clamp(1rem, 3vw, 1.75rem);
+        }
+
+        .topbar-right {
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+        }
+
+        .stat-pill,
+        .btn-icon,
+        .btn-undo,
+        .results-title,
+        .results-count,
+        .chip-name,
+        .empty-list {
+            color: #fff;
+            -webkit-text-stroke: 0.5px rgba(0, 0, 0, 0.5);
+            paint-order: stroke fill;
+            text-shadow: var(--slot-text-shadow);
+        }
+
+        .stat-pill {
+            font-size: 0.72rem;
+            font-weight: 600;
+        }
+
+        .btn-icon {
+            background: none;
+            font-size: 1.1rem;
+            cursor: pointer;
+            padding: 0.25rem;
+            transition: opacity var(--transition), transform var(--transition);
+        }
+
+        .btn-icon:hover {
+            opacity: 0.85;
+        }
+
+        .btn-icon.is-active {
+            opacity: 1;
+            color: #93c5fd;
+        }
+
+        .stage {
+            position: absolute;
+            inset: 0;
+            z-index: 2;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            padding: clamp(3.5rem, 8vh, 5rem) clamp(1rem, 3vw, 2rem) clamp(7rem, 16vh, 10rem);
+        }
+
+        .draw-zone {
+            position: relative;
+            width: 100%;
+            max-width: 1100px;
+            height: 100%;
+            max-height: 100%;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            gap: clamp(0.5rem, 2vh, 1.25rem);
+            text-align: center;
+        }
+
+        .draw-zone.is-rolling {
+            animation: zone-shake 0.1s ease-in-out infinite;
+        }
+
+        .draw-zone.is-result {
+            animation: zone-pop 0.55s ease;
+        }
+
+        @keyframes zone-shake {
+            0%, 100% { transform: translateY(0) scale(1); }
+            50% { transform: translateY(-4px) scale(1.008); }
+        }
+
+        @keyframes zone-pop {
+            0% { transform: scale(0.96); }
+            45% { transform: scale(1.04); }
+            100% { transform: scale(1); }
+        }
+
+        .draw-order,
+        .slot-item,
+        .slot-placeholder {
+            -webkit-text-stroke: 0.75px rgba(0, 0, 0, 0.5);
+            paint-order: stroke fill;
+            text-shadow: var(--slot-text-shadow);
+        }
+
+        .draw-order {
+            min-height: 1.5rem;
+            margin-top: clamp(-0.5rem, -1vh, 0);
+            font-size: clamp(1rem, 2.8vw, 1.6rem);
+            font-weight: 700;
+            letter-spacing: 0.12em;
+            text-transform: uppercase;
+            color: #fff;
+        }
+
+        .slot-wrap {
+            width: 100%;
+            flex: 1;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            min-height: 0;
+        }
+
+        .slot-window {
+            position: relative;
+            width: 100%;
+            height: clamp(10rem, 50vh, 22rem);
+            overflow: hidden;
+            mask-image: linear-gradient(to bottom, transparent 0%, black 8%, black 92%, transparent 100%);
+        }
+
+        .slot-window.is-rolling .slot-item {
+            opacity: 0.7;
+            filter: blur(0.3px);
+        }
+
+        .slot-window.is-result .slot-item {
+            color: #fff;
+            transform: scale(1.02);
+        }
+
+        .slot-reel {
+            will-change: transform;
+        }
+
+        .slot-item {
+            height: clamp(10rem, 50vh, 22rem);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            padding: 0 clamp(0.5rem, 3vw, 2rem);
+            font-size: clamp(3.5rem, 11vw, 7rem);
+            font-weight: 700;
+            line-height: 1;
+            font-variant-numeric: tabular-nums;
+            color: #fff;
+            -webkit-text-stroke: 1.25px rgba(0, 0, 0, 0.5);
+        }
+
+        .slot-item.is-long {
+            font-size: clamp(2.75rem, 8vw, 5.5rem);
+            line-height: 1.1;
+            letter-spacing: -0.01em;
+        }
+
+        .slot-placeholder {
+            height: 100%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: clamp(2rem, 5vw, 3.5rem);
+            font-weight: 500;
+            color: rgba(255, 255, 255, 0.45);
+        }
+
+        .burst {
+            position: absolute;
+            inset: 0;
+            pointer-events: none;
+            overflow: visible;
+        }
+
+        .burst-dot {
+            position: absolute;
+            left: 50%;
+            top: 50%;
+            width: 10px;
+            height: 10px;
+            border-radius: 50%;
+            opacity: 0;
+            animation: burst-fly 0.7s ease-out forwards;
+        }
+
+        @keyframes burst-fly {
+            0% {
+                opacity: 1;
+                transform: translate(-50%, -50%) scale(1);
+            }
+            100% {
+                opacity: 0;
+                transform: translate(
+                    calc(-50% + var(--bx)),
+                    calc(-50% + var(--by))
+                ) scale(0.2);
+            }
+        }
+
+        .hero-actions {
+            display: flex;
+            gap: 0.75rem;
+            align-items: center;
+            justify-content: center;
+            margin-top: clamp(0.25rem, 1vh, 0.75rem);
+        }
+
+        button {
+            appearance: none;
+            border: none;
+            cursor: pointer;
+            font: inherit;
+            transition: background var(--transition), transform var(--transition), opacity var(--transition), box-shadow var(--transition);
+        }
+
+        button:active:not(:disabled) {
+            transform: scale(0.97);
+        }
+
+        button:disabled {
+            opacity: 0.35;
+            cursor: not-allowed;
+        }
+
+        .btn-draw {
+            padding: 0.85rem 2.5rem;
+            border-radius: 999px;
+            background: var(--accent);
+            color: #fff;
+            font-size: clamp(1rem, 2.2vw, 1.2rem);
+            font-weight: 700;
+        }
+
+        .btn-draw:hover:not(:disabled) {
+            background: #1e40af;
+        }
+
+        .btn-undo {
+            padding: 0.75rem 1rem;
+            background: none;
+            font-size: 0.82rem;
+            font-weight: 600;
+        }
+
+        .btn-undo:hover:not(:disabled) {
+            opacity: 0.85;
+        }
+
+        .results-bar {
+            position: absolute;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            z-index: 3;
+            padding: clamp(1.5rem, 4vh, 2.5rem) clamp(1rem, 3vw, 1.75rem) clamp(0.65rem, 1.5vw, 1rem);
+            background: linear-gradient(to top, rgba(0, 0, 0, 0.55) 0%, rgba(0, 0, 0, 0.25) 55%, transparent 100%);
+        }
+
+        .results-panel {
+            padding: 0.35rem 0 0.25rem;
+        }
+
+        .results-header {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            margin-bottom: 0.65rem;
+        }
+
+        .results-title {
+            font-size: 0.7rem;
+            font-weight: 700;
+            letter-spacing: 0.1em;
+            text-transform: uppercase;
+        }
+
+        .results-count {
+            font-size: 0.68rem;
+            font-weight: 600;
+        }
+
+        .drawn-list {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 0.35rem 0.65rem;
+            max-height: clamp(3rem, 10vh, 5rem);
+            overflow-y: auto;
+            padding: 0.1rem;
+        }
+
+        .drawn-chip {
+            display: inline-flex;
+            align-items: center;
+            gap: 0.35rem;
+            padding: 0.15rem 0.25rem;
+            animation: chip-in 0.25s ease;
+        }
+
+        @keyframes chip-in {
+            from { opacity: 0; transform: scale(0.9); }
+            to { opacity: 1; transform: scale(1); }
+        }
+
+        .chip-rank {
+            font-size: 0.82rem;
+            font-weight: 700;
+            color: rgba(255, 255, 255, 0.9);
+            -webkit-text-stroke: 0.5px rgba(0, 0, 0, 0.5);
+            paint-order: stroke fill;
+            text-shadow: var(--slot-text-shadow);
+        }
+
+        .chip-name {
+            font-size: 0.82rem;
+            font-weight: 600;
+        }
+
+        .chip-remove {
+            width: 1.25rem;
+            height: 1.25rem;
+            border-radius: 50%;
+            background: transparent;
+            color: rgba(255, 255, 255, 0.55);
+            font-size: 0.85rem;
+            line-height: 1;
+            display: grid;
+            place-items: center;
+            -webkit-text-stroke: 0;
+            text-shadow: none;
+        }
+
+        .chip-remove:hover {
+            background: rgba(255, 255, 255, 0.12);
+            color: #fca5a5;
+        }
+
+        .empty-list {
+            width: 100%;
+            margin: 0;
+            padding: 0.75rem 0;
+            text-align: center;
+            font-size: 0.82rem;
+            color: rgba(255, 255, 255, 0.6);
+        }
+
+        .setup-drawer {
+            position: absolute;
+            top: calc(100% + 0.5rem);
+            right: 0;
+            width: min(92vw, 300px);
+            padding: 0.75rem 0;
+            display: none;
+            flex-direction: column;
+            gap: 0.55rem;
+            z-index: 10;
+        }
+
+        .setup-drawer.is-open {
+            display: flex;
+        }
+
+        .setup-drawer label {
+            font-size: 0.68rem;
+            font-weight: 600;
+            color: var(--text-muted);
+        }
+
+        .setup-drawer textarea {
+            width: 100%;
+            min-height: 6.5rem;
+            padding: 0.6rem 0;
+            border: none;
+            border-bottom: 1px solid rgba(30, 41, 59, 0.15);
+            background: transparent;
+            color: var(--text);
+            font: inherit;
+            font-size: 0.82rem;
+            line-height: 1.45;
+            resize: vertical;
+            outline: none;
+            text-shadow: var(--text-shadow);
+        }
+
+        .setup-drawer textarea:focus {
+            border-bottom-color: var(--accent);
+        }
+
+        .setup-actions {
+            display: flex;
+            gap: 0.4rem;
+        }
+
+        .setup-actions button {
+            flex: 1;
+            padding: 0.55rem;
+            font-size: 0.78rem;
+            font-weight: 600;
+            background: none;
+            color: var(--text-muted);
+            text-shadow: var(--text-shadow);
+        }
+
+        .setup-actions button:hover {
+            color: var(--accent);
+        }
+
+        .setup-wrap {
+            position: relative;
+        }
+
+        @media (max-width: 520px) {
+            .hero-actions {
+                flex-direction: column;
+            }
+
+            .btn-undo {
+                width: 100%;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="scene">
+        <video
+            class="bg-video"
+            src="image/%E0%B8%84%E0%B9%88%E0%B8%B2%E0%B8%A2%E0%B8%97%E0%B8%B1%E0%B8%81%E0%B8%A9%E0%B8%B0%20%E0%B8%A1.1-69.mp4"
+            autoplay
+            muted
+            loop
+            playsinline
+            aria-hidden="true"
+        ></video>
+
+        <header class="topbar">
+            <div class="topbar-right">
+                <div class="stat-pill" id="remainingBadge">เหลือ 0 คน</div>
+                <div class="setup-wrap">
+                    <button type="button" class="btn-icon" id="btnSettings" title="ตั้งค่ารายชื่อ" aria-expanded="false">⚙</button>
+                    <div class="setup-drawer" id="setupDrawer">
+                        <label for="poolInput">รายชื่อทีม (บรรทัดละ 1 ทีม)</label>
+                        <textarea id="poolInput" placeholder="St.Mary - ต.ล.ก&#10;..."></textarea>
+                        <div class="setup-actions">
+                            <button type="button" id="btnApply">ใช้รายการ</button>
+                            <button type="button" id="btnReset">รีเซ็ต</button>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </header>
+
+        <main class="stage">
+            <div class="draw-zone" id="drawZone">
+                <div class="burst" id="burst" aria-hidden="true"></div>
+                <div class="slot-wrap">
+                    <div class="slot-window" id="slotWindow">
+                        <div class="slot-reel" id="slotReel">
+                            <div class="slot-placeholder"></div>
+                        </div>
+                    </div>
+                </div>
+                <div class="draw-order" id="drawOrder"></div>
+                <div class="hero-actions">
+                    <button type="button" class="btn-draw" id="btnDraw">สุ่ม</button>
+                    <button type="button" class="btn-undo" id="btnUndo">ยกเลิก</button>
+                </div>
+            </div>
+        </main>
+
+        <section class="results-bar">
+            <div class="results-panel">
+                <div class="results-header">
+                    <span class="results-title">ลำดับที่สุ่มแล้ว</span>
+                    <span class="results-count" id="resultsCount">0 รายการ</span>
+                </div>
+                <div class="drawn-list" id="drawnList">
+                    <p class="empty-list">ยังไม่มีรายการ</p>
+                </div>
+            </div>
+        </section>
+    </div>
+
+    <script>
+        const remainingBadge = document.getElementById('remainingBadge');
+        const resultsCount = document.getElementById('resultsCount');
+        const scene = document.querySelector('.scene');
+        const drawZone = document.getElementById('drawZone');
+        const drawOrder = document.getElementById('drawOrder');
+        const slotWindow = document.getElementById('slotWindow');
+        const slotReel = document.getElementById('slotReel');
+        const burstEl = document.getElementById('burst');
+        const drawnList = document.getElementById('drawnList');
+        const poolInput = document.getElementById('poolInput');
+        const btnDraw = document.getElementById('btnDraw');
+        const btnUndo = document.getElementById('btnUndo');
+        const btnApply = document.getElementById('btnApply');
+        const btnReset = document.getElementById('btnReset');
+        const btnSettings = document.getElementById('btnSettings');
+        const setupDrawer = document.getElementById('setupDrawer');
+
+        const STORAGE_KEY = 'randomno-state-v2';
+        const ROLL_MS = 3400;
+
+        let pool = [];
+        let drawn = [];
+        let rolling = false;
+        let rollTimer = null;
+        let slotItemHeight = 0;
+
+        function parsePoolText(text) {
+            return text
+                .split('\n')
+                .map((line) => line.trim())
+                .filter(Boolean);
+        }
+
+        function saveState() {
+            localStorage.setItem(STORAGE_KEY, JSON.stringify({
+                pool,
+                drawn,
+                poolText: poolInput.value,
+            }));
+        }
+
+        function loadState() {
+            try {
+                const raw = localStorage.getItem(STORAGE_KEY);
+                if (!raw) return false;
+                const data = JSON.parse(raw);
+                pool = Array.isArray(data.pool) ? data.pool : [];
+                drawn = Array.isArray(data.drawn) ? data.drawn : [];
+                poolInput.value = data.poolText || '';
+                return true;
+            } catch {
+                return false;
+            }
+        }
+
+        function updateUI() {
+            remainingBadge.textContent = `เหลือ ${pool.length} คน`;
+            resultsCount.textContent = `${drawn.length} รายการ`;
+            btnDraw.disabled = rolling || pool.length === 0;
+            btnUndo.disabled = rolling || drawn.length === 0;
+
+            if (drawn.length === 0) {
+                drawnList.innerHTML = '<p class="empty-list">ยังไม่มีรายการ</p>';
+            } else {
+                drawnList.innerHTML = drawn.map((item, index) => `
+                    <div class="drawn-chip" data-index="${index}">
+                        <span class="chip-rank">${item.order}</span>
+                        <span class="chip-name">${escapeHtml(item.value)}</span>
+                        <button type="button" class="chip-remove" data-index="${index}" title="ลบและคืนกลับ">×</button>
+                    </div>
+                `).join('');
+
+                drawnList.querySelectorAll('.chip-remove').forEach((btn) => {
+                    btn.addEventListener('click', () => removeDrawn(Number(btn.dataset.index)));
+                });
+            }
+        }
+
+        function escapeHtml(text) {
+            return text
+                .replace(/&/g, '&amp;')
+                .replace(/</g, '&lt;')
+                .replace(/>/g, '&gt;')
+                .replace(/"/g, '&quot;');
+        }
+
+        function measureSlotHeight() {
+            const probe = document.createElement('div');
+            probe.className = 'slot-item';
+            probe.textContent = '00';
+            probe.style.visibility = 'hidden';
+            probe.style.position = 'absolute';
+            slotReel.appendChild(probe);
+            slotItemHeight = probe.offsetHeight;
+            probe.remove();
+            return slotItemHeight;
+        }
+
+        function slotItemHtml(value) {
+            const long = String(value).length > 20;
+            return `<div class="slot-item${long ? ' is-long' : ''}">${escapeHtml(String(value))}</div>`;
+        }
+
+        function setRollingVisuals(active) {
+            scene.classList.toggle('is-rolling', active);
+            drawZone.classList.toggle('is-rolling', active);
+            slotWindow.classList.toggle('is-rolling', active);
+            if (!active) drawZone.classList.remove('is-result');
+        }
+
+        function playBurst() {
+            const colors = ['#1d4ed8', '#e879a8', '#f9a8c9', '#60a5fa', '#fbbf24'];
+            burstEl.innerHTML = '';
+            for (let i = 0; i < 24; i++) {
+                const dot = document.createElement('span');
+                dot.className = 'burst-dot';
+                const angle = (i / 24) * Math.PI * 2;
+                const dist = 80 + Math.random() * 120;
+                dot.style.background = colors[i % colors.length];
+                dot.style.setProperty('--bx', `${Math.cos(angle) * dist}px`);
+                dot.style.setProperty('--by', `${Math.sin(angle) * dist}px`);
+                dot.style.animationDelay = `${Math.random() * 0.08}s`;
+                burstEl.appendChild(dot);
+            }
+            drawZone.classList.add('is-result');
+            slotWindow.classList.add('is-result');
+            setTimeout(() => {
+                drawZone.classList.remove('is-result');
+            }, 550);
+        }
+
+        function showPlaceholder() {
+            drawOrder.textContent = '';
+            setRollingVisuals(false);
+            slotWindow.classList.remove('is-result');
+            slotReel.style.transition = 'none';
+            slotReel.style.transform = 'translateY(0)';
+            const label = pool.length ? '' : 'หมดแล้ว';
+            slotReel.innerHTML = `<div class="slot-placeholder">${label}</div>`;
+        }
+
+        function showResult(order, value, animate = true) {
+            drawOrder.textContent = `ลำดับที่ ${order}`;
+            setRollingVisuals(false);
+            slotReel.style.transition = 'none';
+            slotReel.style.transform = 'translateY(0)';
+            slotReel.innerHTML = slotItemHtml(value);
+            if (animate) playBurst();
+        }
+
+        function buildReelSequence(finalValue) {
+            const items = [];
+            const spinCount = 22 + Math.floor(Math.random() * 14);
+            for (let i = 0; i < spinCount; i++) {
+                items.push(pool[Math.floor(Math.random() * pool.length)]);
+            }
+            items.push(finalValue);
+            return items;
+        }
+
+        function runSlotRoll(finalValue, onDone) {
+            const items = buildReelSequence(finalValue);
+            slotReel.innerHTML = items.map((v) => slotItemHtml(v)).join('');
+
+            const height = measureSlotHeight() || slotWindow.offsetHeight;
+            const target = -(items.length - 1) * height;
+
+            slotReel.style.transition = 'none';
+            slotReel.style.transform = 'translateY(0)';
+
+            requestAnimationFrame(() => {
+                requestAnimationFrame(() => {
+                    slotReel.style.transition = `transform ${ROLL_MS}ms cubic-bezier(0.08, 0.82, 0.12, 1)`;
+                    slotReel.style.transform = `translateY(${target}px)`;
+                });
+            });
+
+            rollTimer = setTimeout(() => {
+                rollTimer = null;
+                onDone();
+            }, ROLL_MS + 80);
+        }
+
+        function pickFromPool() {
+            const index = Math.floor(Math.random() * pool.length);
+            return { index, value: pool[index] };
+        }
+
+        function commitPick(value) {
+            const order = drawn.length + 1;
+            drawn.push({ order, value });
+            pool = pool.filter((item) => item !== value);
+            showResult(order, value, true);
+            updateUI();
+            saveState();
+        }
+
+        function draw() {
+            if (rolling || pool.length === 0) return;
+
+            rolling = true;
+            btnDraw.disabled = true;
+            btnUndo.disabled = true;
+            drawOrder.textContent = '';
+            setRollingVisuals(true);
+            slotWindow.classList.remove('is-result');
+            burstEl.innerHTML = '';
+
+            const finalPick = pickFromPool();
+
+            runSlotRoll(finalPick.value, () => {
+                commitPick(finalPick.value);
+                rolling = false;
+                setRollingVisuals(false);
+                updateUI();
+            });
+        }
+
+        function undoLast() {
+            if (rolling || drawn.length === 0) return;
+            const last = drawn.pop();
+            pool.push(last.value);
+            if (drawn.length > 0) {
+                const prev = drawn[drawn.length - 1];
+                showResult(prev.order, prev.value, false);
+            } else {
+                showPlaceholder();
+            }
+            updateUI();
+            saveState();
+        }
+
+        function removeDrawn(index) {
+            if (rolling) return;
+            const [removed] = drawn.splice(index, 1);
+            pool.push(removed.value);
+            drawn.forEach((item, i) => {
+                item.order = i + 1;
+            });
+
+            if (drawn.length > 0) {
+                const last = drawn[drawn.length - 1];
+                showResult(last.order, last.value, false);
+            } else {
+                showPlaceholder();
+            }
+
+            updateUI();
+            saveState();
+        }
+
+        function applyPool() {
+            if (rolling) return;
+            const items = parsePoolText(poolInput.value);
+            if (items.length === 0) return;
+
+            const unique = [...new Set(items)];
+            pool = unique.filter((item) => !drawn.some((d) => d.value === item));
+            updateUI();
+            saveState();
+            showPlaceholder();
+            toggleSetup(false);
+        }
+
+        function resetAll() {
+            if (rolling) return;
+            if (!confirm('รีเซ็ตรายการทั้งหมด?')) return;
+
+            const items = parsePoolText(poolInput.value);
+            pool = [...new Set(items)];
+            drawn = [];
+            showPlaceholder();
+            updateUI();
+            saveState();
+        }
+
+        const DEFAULT_POOL = [
+            'St.Mary - ต.ล.ก',
+            'St.Francis - แอวลั่นปัด',
+            'St.Gregory - ฟ้าฮ้องบึ้ม',
+            'St.Martin - ทุ่งลุยลาย',
+            'St.Louis - คารถแห่',
+            'St.George - จั๊กกิ้มกับต๊กโต',
+            'St.Dominic - หมากัด',
+            'St.Edmund - เด๋อเดี่ยงด่าง',
+            'St.Montfort - กลับมาทำไม',
+        ];
+
+        function initDefaultPool() {
+            poolInput.value = DEFAULT_POOL.join('\n');
+            pool = [...DEFAULT_POOL];
+        }
+
+        function toggleSetup(force) {
+            const open = force !== undefined ? force : !setupDrawer.classList.contains('is-open');
+            setupDrawer.classList.toggle('is-open', open);
+            btnSettings.classList.toggle('is-active', open);
+            btnSettings.setAttribute('aria-expanded', String(open));
+        }
+
+        btnDraw.addEventListener('click', draw);
+        btnUndo.addEventListener('click', undoLast);
+        btnApply.addEventListener('click', applyPool);
+        btnReset.addEventListener('click', resetAll);
+        btnSettings.addEventListener('click', () => toggleSetup());
+
+        document.addEventListener('click', (event) => {
+            if (!event.target.closest('.setup-wrap')) {
+                toggleSetup(false);
+            }
+        });
+
+        document.addEventListener('keydown', (event) => {
+            if (event.target.matches('textarea, input')) return;
+            if (event.code === 'Space') {
+                event.preventDefault();
+                draw();
+            }
+            if (event.code === 'KeyU') {
+                event.preventDefault();
+                undoLast();
+            }
+            if (event.code === 'Escape') {
+                toggleSetup(false);
+            }
+        });
+
+        if (!loadState()) {
+            initDefaultPool();
+        }
+
+        showPlaceholder();
+        updateUI();
+    </script>
+</body>
+</html>

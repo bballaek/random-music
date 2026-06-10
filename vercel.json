@@ -1,5 +1,6 @@
 {
   "rewrites": [
-    { "source": "/timer", "destination": "/timer/index.html" }
+    { "source": "/timer", "destination": "/timer/index.html" },
+    { "source": "/randomno", "destination": "/randomno.html" }
   ]
 }
