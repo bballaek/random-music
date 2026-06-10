@@ -176,24 +176,6 @@
             transition: background var(--transition);
         }
 
-        .clock-segment--seconds {
-            gap: 0.35rem;
-            align-items: baseline;
-        }
-
-        .clock-label {
-            font-size: clamp(0.65rem, 1.1vw, 0.85rem);
-            font-weight: 600;
-            color: rgba(255, 255, 255, 0.55);
-            letter-spacing: 0.02em;
-            user-select: none;
-            pointer-events: none;
-        }
-
-        .clock-segment--centis {
-            pointer-events: none;
-        }
-
         .clock.is-editable .clock-segment {
             cursor: pointer;
         }
@@ -316,14 +298,10 @@
 
                 <div class="clock is-editable" id="clock" aria-live="polite">
                     <div class="clock-segment" data-unit="minutes">
-                        <span class="clock-value" id="displayMinutes">07</span>
+                        <span class="clock-value" id="displayMinutes">01</span>
                     </div>
-                    <div class="clock-segment clock-segment--seconds" data-unit="seconds">
+                    <div class="clock-segment" data-unit="seconds">
                         <span class="clock-value" id="displaySeconds">00</span>
-                        <span class="clock-label">วินาที</span>
-                    </div>
-                    <div class="clock-segment clock-segment--centis">
-                        <span class="clock-value" id="displayCentis">00</span>
                     </div>
                 </div>
 
@@ -344,9 +322,8 @@
         const statusEl = document.getElementById('status');
         const displayMinutes = document.getElementById('displayMinutes');
         const displaySeconds = document.getElementById('displaySeconds');
-        const displayCentis = document.getElementById('displayCentis');
         const progressFill = document.getElementById('progressFill');
-        const segments = document.querySelectorAll('.clock-segment[data-unit]');
+        const segments = document.querySelectorAll('.clock-segment');
 
         const UNIT_MAX = { minutes: 99, seconds: 59 };
         const WARNING_MS = 10_000;
@@ -372,18 +349,15 @@
         }
 
         function splitMs(ms) {
-            const safeMs = Math.max(0, ms);
-            const totalSeconds = Math.floor(safeMs / 1000);
+            const totalSeconds = Math.max(0, Math.ceil(ms / 1000));
             return {
                 minutes: Math.floor(totalSeconds / 60),
                 seconds: totalSeconds % 60,
-                centiseconds: Math.floor((safeMs % 1000) / 10),
             };
         }
 
         function applyUnitsFromMs(ms) {
-            const { minutes, seconds } = splitMs(ms);
-            units = { minutes, seconds };
+            units = splitMs(ms);
         }
 
         function syncTimeFromUnits() {
@@ -405,7 +379,6 @@
                 : units;
             displayMinutes.textContent = pad2(parts.minutes);
             displaySeconds.textContent = pad2(parts.seconds);
-            displayCentis.textContent = pad2(parts.centiseconds ?? 0);
         }
 
         function updateVisuals() {
