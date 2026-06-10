@@ -2,11 +2,562 @@
 <html lang="en">
 <head>
     <meta charset="UTF-8">
-    <meta http-equiv="refresh" content="0; url=timer/">
-    <script>location.replace('timer/');</script>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Timer</title>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+    <style>
+        :root {
+            --timer-color: #2563eb;
+            --timer-outline: rgba(15, 45, 110, 0.5);
+            --text-muted: rgba(255, 255, 255, 0.5);
+            --border-strong: rgba(255, 255, 255, 0.22);
+            --danger: #ef4444;
+            --danger-outline: rgba(100, 15, 15, 0.55);
+            --ready: #6ee7a0;
+            --running: #60a5fa;
+            --paused: #fbbf24;
+            --radius-pill: 999px;
+            --transition: 0.18s ease;
+        }
+
+        *,
+        *::before,
+        *::after {
+            box-sizing: border-box;
+        }
+
+        html,
+        body {
+            margin: 0;
+            width: 100%;
+            height: 100%;
+            overflow: hidden;
+        }
+
+        body {
+            font-family: 'Inter', system-ui, sans-serif;
+            background: #000;
+            -webkit-font-smoothing: antialiased;
+        }
+
+        .scene {
+            position: relative;
+            width: 100%;
+            height: 100dvh;
+            isolation: isolate;
+        }
+
+        .bg-video {
+            position: absolute;
+            inset: 0;
+            z-index: 0;
+            width: 100%;
+            height: 100%;
+            object-fit: cover;
+            object-position: center;
+        }
+
+        .timer-app {
+            position: absolute;
+            top: clamp(1.35rem, 2.6vh, 2.15rem);
+            right: clamp(1.25rem, 2.8vw, 2.25rem);
+            z-index: 2;
+            display: flex;
+            flex-direction: column;
+            align-items: flex-end;
+            gap: 0.45rem;
+        }
+
+        .timer-hero {
+            display: flex;
+            flex-direction: column;
+            align-items: flex-end;
+            gap: 0.45rem;
+        }
+
+        .status-badge {
+            display: inline-flex;
+            align-items: center;
+            gap: 0.4rem;
+            padding: 0.28rem 0.65rem;
+            border-radius: var(--radius-pill);
+            border: 1px solid rgba(255, 255, 255, 0.12);
+            background: rgba(0, 0, 0, 0.28);
+            backdrop-filter: blur(8px);
+            font-size: 0.62rem;
+            font-weight: 600;
+            letter-spacing: 0.12em;
+            text-transform: uppercase;
+            color: var(--text-muted);
+            transition: color var(--transition), border-color var(--transition);
+        }
+
+        .status-dot {
+            width: 6px;
+            height: 6px;
+            border-radius: 50%;
+            background: var(--ready);
+            flex-shrink: 0;
+            transition: background var(--transition);
+        }
+
+        .status-badge.is-hidden {
+            display: none;
+        }
+
+        .status-badge.is-running {
+            color: rgba(255, 255, 255, 0.75);
+            border-color: rgba(96, 165, 250, 0.3);
+        }
+
+        .status-badge.is-running .status-dot {
+            background: var(--running);
+            animation: blink 1.2s ease-in-out infinite;
+        }
+
+        .status-badge.is-paused .status-dot {
+            background: var(--paused);
+        }
+
+        .status-badge.is-done {
+            color: var(--danger);
+            border-color: rgba(255, 92, 92, 0.35);
+        }
+
+        .status-badge.is-done .status-dot {
+            background: var(--danger);
+        }
+
+        @keyframes blink {
+            0%, 100% { opacity: 1; }
+            50% { opacity: 0.35; }
+        }
+
+        .clock {
+            display: flex;
+            flex-direction: column;
+            align-items: flex-end;
+            gap: 0.15rem;
+            transition: transform 0.3s ease;
+        }
+
+        .clock.is-running {
+            transform: scale(1.02);
+        }
+
+        .clock.is-warning .clock-value,
+        .clock.is-warning .clock-input {
+            color: var(--danger);
+            text-shadow:
+                0 1px 0 var(--danger-outline),
+                0 2px 8px rgba(0, 0, 0, 0.35);
+        }
+
+        .clock.is-done .clock-value,
+        .clock.is-done .clock-input {
+            color: var(--danger);
+            text-shadow:
+                0 1px 0 var(--danger-outline),
+                0 2px 8px rgba(0, 0, 0, 0.35);
+            animation: time-up-blink 0.7s ease-in-out infinite;
+        }
+
+        @keyframes time-up-blink {
+            0%, 100% { opacity: 1; }
+            50% { opacity: 0.15; }
+        }
+
+        .clock-segment {
+            display: flex;
+            align-items: center;
+            justify-content: flex-end;
+            border-radius: 8px;
+            padding: 0.05rem 0.15rem;
+            transition: background var(--transition);
+        }
+
+        .clock.is-editable .clock-segment {
+            cursor: pointer;
+        }
+
+        .clock.is-editable .clock-segment:hover {
+            background: rgba(255, 255, 255, 0.06);
+        }
+
+        .clock.is-editable .clock-segment.is-editing,
+        .clock.is-editable .clock-segment.is-editing:hover {
+            background: rgba(255, 255, 255, 0.1);
+        }
+
+        .clock-value,
+        .clock-input {
+            color: var(--timer-color);
+            font-size: clamp(2.75rem, 5vw, 4.25rem);
+            font-weight: 700;
+            line-height: 0.95;
+            font-variant-numeric: tabular-nums;
+            letter-spacing: 0.04em;
+            text-shadow:
+                0 1px 0 var(--timer-outline),
+                0 2px 8px rgba(0, 0, 0, 0.35);
+            transition: color 0.3s ease;
+        }
+
+        .clock-value {
+            display: block;
+            user-select: none;
+        }
+
+        .clock-input {
+            width: 2.1ch;
+            padding: 0;
+            border: none;
+            border-bottom: 2px solid rgba(37, 99, 235, 0.65);
+            border-radius: 0;
+            background: transparent;
+            color: inherit;
+            font: inherit;
+            text-align: center;
+            outline: none;
+            appearance: textfield;
+            -moz-appearance: textfield;
+        }
+
+        .clock-input::-webkit-outer-spin-button,
+        .clock-input::-webkit-inner-spin-button {
+            appearance: none;
+            margin: 0;
+        }
+
+        .progress-track {
+            width: 100%;
+            min-width: 5.5rem;
+            height: 2px;
+            border-radius: var(--radius-pill);
+            background: rgba(255, 255, 255, 0.1);
+            overflow: hidden;
+        }
+
+        .progress-fill {
+            height: 100%;
+            width: 100%;
+            border-radius: inherit;
+            background: var(--timer-color);
+            transform-origin: left center;
+            transform: scaleX(1);
+            transition: transform 0.4s ease, background 0.3s ease;
+        }
+
+        .progress-fill.is-warning {
+            background: var(--danger);
+        }
+
+        .hint {
+            position: absolute;
+            bottom: 0.75rem;
+            left: 50%;
+            transform: translateX(-50%);
+            margin: 0;
+            font-size: 0.65rem;
+            text-align: center;
+            color: rgba(255, 255, 255, 0.22);
+            line-height: 1.6;
+            white-space: nowrap;
+            z-index: 2;
+        }
+
+        kbd {
+            display: inline-block;
+            padding: 0.05rem 0.35rem;
+            border-radius: 4px;
+            border: 1px solid rgba(255, 255, 255, 0.12);
+            background: rgba(255, 255, 255, 0.06);
+            font-size: 0.68rem;
+            font-family: inherit;
+        }
+    </style>
 </head>
 <body>
-    <p><a href="timer/">Go to timer</a></p>
+    <div class="scene">
+        <video
+            class="bg-video"
+            src="image/%E0%B8%AA%E0%B8%B3%E0%B9%80%E0%B8%99%E0%B8%B2%E0%B8%82%E0%B8%AD%E0%B8%87%20SG%20110.mp4"
+            autoplay
+            muted
+            loop
+            playsinline
+            aria-hidden="true"
+        ></video>
+
+        <main class="timer-app">
+            <header class="timer-hero">
+                <div class="status-badge" id="statusBadge">
+                    <span class="status-dot" aria-hidden="true"></span>
+                    <span id="status"></span>
+                </div>
+
+                <div class="clock is-editable" id="clock" aria-live="polite">
+                    <div class="clock-segment" data-unit="minutes">
+                        <span class="clock-value" id="displayMinutes">01</span>
+                    </div>
+                    <div class="clock-segment" data-unit="seconds">
+                        <span class="clock-value" id="displaySeconds">00</span>
+                    </div>
+                </div>
+
+                <div class="progress-track" aria-hidden="true">
+                    <div class="progress-fill" id="progressFill"></div>
+                </div>
+            </header>
+        </main>
+
+        <p class="hint">
+            click time to set · scroll to adjust · <kbd>Space</kbd> start/pause · <kbd>R</kbd> reset
+        </p>
+    </div>
+
+    <script>
+        const clock = document.getElementById('clock');
+        const statusBadge = document.getElementById('statusBadge');
+        const statusEl = document.getElementById('status');
+        const displayMinutes = document.getElementById('displayMinutes');
+        const displaySeconds = document.getElementById('displaySeconds');
+        const progressFill = document.getElementById('progressFill');
+        const segments = document.querySelectorAll('.clock-segment');
+
+        const UNIT_MAX = { minutes: 99, seconds: 59 };
+        const WARNING_MS = 10_000;
+
+        let units = { minutes: 7, seconds: 0 };
+        let totalMs = 0;
+        let remainingMs = 0;
+        let endAt = 0;
+        let rafId = null;
+        let state = 'idle';
+        let editingUnit = null;
+
+        function pad2(n) {
+            return String(n).padStart(2, '0');
+        }
+
+        function clamp(value, min, max) {
+            return Math.min(max, Math.max(min, value));
+        }
+
+        function readSetupMs() {
+            return (units.minutes * 60 + units.seconds) * 1000;
+        }
+
+        function splitMs(ms) {
+            const totalSeconds = Math.max(0, Math.ceil(ms / 1000));
+            return {
+                minutes: Math.floor(totalSeconds / 60),
+                seconds: totalSeconds % 60,
+            };
+        }
+
+        function applyUnitsFromMs(ms) {
+            units = splitMs(ms);
+        }
+
+        function syncTimeFromUnits() {
+            if (state === 'running') return;
+            totalMs = readSetupMs();
+            remainingMs = totalMs;
+            if (state === 'done') state = 'idle';
+            updateVisuals();
+        }
+
+        function setEditable(editable) {
+            clock.classList.toggle('is-editable', editable);
+        }
+
+        function updateDisplayValues() {
+            if (editingUnit) return;
+            const parts = state === 'running' || state === 'paused' || state === 'done'
+                ? splitMs(remainingMs)
+                : units;
+            displayMinutes.textContent = pad2(parts.minutes);
+            displaySeconds.textContent = pad2(parts.seconds);
+        }
+
+        function updateVisuals() {
+            updateDisplayValues();
+
+            const progress = totalMs > 0 ? remainingMs / totalMs : 1;
+            progressFill.style.transform = `scaleX(${progress})`;
+            progressFill.classList.toggle(
+                'is-warning',
+                state === 'running' && remainingMs <= WARNING_MS && remainingMs > 0
+            );
+
+            clock.classList.toggle('is-running', state === 'running');
+            clock.classList.toggle(
+                'is-warning',
+                state === 'running' && remainingMs <= WARNING_MS && remainingMs > 0
+            );
+            clock.classList.toggle('is-done', state === 'done');
+
+            statusBadge.className = 'status-badge';
+            if (state === 'running') {
+                statusBadge.classList.add('is-hidden');
+            } else if (state === 'paused') {
+                statusBadge.classList.add('is-paused');
+                statusEl.textContent = 'Paused';
+            } else if (state === 'done') {
+                statusBadge.classList.add('is-hidden');
+            } else {
+                statusBadge.classList.add('is-hidden');
+            }
+
+            setEditable(state !== 'running');
+        }
+
+        function adjustUnit(unit, delta) {
+            if (state === 'running') return;
+            units[unit] = clamp(units[unit] + delta, 0, UNIT_MAX[unit]);
+            syncTimeFromUnits();
+        }
+
+        function finishEdit(segment, unit, input, span, revert) {
+            if (!revert) {
+                const parsed = parseInt(input.value, 10);
+                units[unit] = clamp(Number.isNaN(parsed) ? 0 : parsed, 0, UNIT_MAX[unit]);
+                syncTimeFromUnits();
+            }
+
+            input.replaceWith(span);
+            segment.classList.remove('is-editing');
+            editingUnit = null;
+            updateDisplayValues();
+        }
+
+        function startEdit(segment) {
+            if (state === 'running' || editingUnit) return;
+
+            const unit = segment.dataset.unit;
+            const span = segment.querySelector('.clock-value');
+            const input = document.createElement('input');
+            input.type = 'number';
+            input.className = 'clock-input';
+            input.min = '0';
+            input.max = String(UNIT_MAX[unit]);
+            input.inputMode = 'numeric';
+            input.value = String(units[unit]);
+            input.setAttribute('aria-label', `Set ${unit}`);
+
+            editingUnit = unit;
+            segment.classList.add('is-editing');
+            span.replaceWith(input);
+            input.focus();
+            input.select();
+
+            input.addEventListener('blur', () => finishEdit(segment, unit, input, span, false));
+            input.addEventListener('keydown', (event) => {
+                if (event.key === 'Enter') {
+                    event.preventDefault();
+                    input.blur();
+                }
+                if (event.key === 'Escape') {
+                    event.preventDefault();
+                    finishEdit(segment, unit, input, span, true);
+                }
+            });
+        }
+
+        function stopLoop() {
+            if (rafId !== null) {
+                cancelAnimationFrame(rafId);
+                rafId = null;
+            }
+        }
+
+        function finishTimer() {
+            stopLoop();
+            remainingMs = 0;
+            state = 'done';
+            applyUnitsFromMs(0);
+            updateVisuals();
+        }
+
+        function tick() {
+            remainingMs = Math.max(0, endAt - Date.now());
+            updateVisuals();
+
+            if (remainingMs <= 0) {
+                finishTimer();
+                return;
+            }
+
+            rafId = requestAnimationFrame(tick);
+        }
+
+        function startTimer() {
+            if (state === 'done' || editingUnit) return;
+
+            if (state === 'idle' || state === 'paused') {
+                if (state === 'idle') {
+                    totalMs = readSetupMs();
+                    remainingMs = totalMs;
+                }
+
+                if (remainingMs <= 0) {
+                    remainingMs = 0;
+                    updateVisuals();
+                    return;
+                }
+
+                endAt = Date.now() + remainingMs;
+                state = 'running';
+                updateVisuals();
+                stopLoop();
+                rafId = requestAnimationFrame(tick);
+            }
+        }
+
+        function pauseTimer() {
+            if (state !== 'running') return;
+            stopLoop();
+            remainingMs = Math.max(0, endAt - Date.now());
+            applyUnitsFromMs(remainingMs);
+            state = 'paused';
+            updateVisuals();
+        }
+
+        function resetTimer() {
+            if (editingUnit) return;
+            stopLoop();
+            state = 'idle';
+            totalMs = readSetupMs();
+            remainingMs = totalMs;
+            updateVisuals();
+        }
+
+        segments.forEach((segment) => {
+            segment.addEventListener('click', () => startEdit(segment));
+            segment.addEventListener('wheel', (event) => {
+                if (state === 'running' || editingUnit) return;
+                event.preventDefault();
+                adjustUnit(segment.dataset.unit, event.deltaY < 0 ? 1 : -1);
+            }, { passive: false });
+        });
+
+        document.addEventListener('keydown', (event) => {
+            if (event.target.matches('.clock-input')) return;
+
+            if (event.code === 'Space') {
+                event.preventDefault();
+                if (state === 'running') pauseTimer();
+                else startTimer();
+            }
+
+            if (event.code === 'KeyR') {
+                event.preventDefault();
+                resetTimer();
+            }
+        });
+
+        syncTimeFromUnits();
+    </script>
 </body>
 </html>
